@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import { magazineMeta, pages } from '@/lib/magazine-data'
 import { cn } from '@/lib/utils'
 import { PageSlot } from './PageSlot'
@@ -40,6 +40,22 @@ export function Flipbook() {
   const spreadLeaves = useMemo(buildSpreadLeaves, [])
   const isMobile = useIsMobile()
   const spread = !isMobile
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }, [])
 
   const maxLocation = spread ? spreadLeaves.length : pages.length - 1
   const [location, setLocation] = useState(0)
@@ -95,7 +111,16 @@ export function Flipbook() {
   const numLeaves = leaves.length
 
   return (
-    <div className="flex w-full flex-col items-center gap-5">
+    <div
+      ref={containerRef}
+      className="flex w-full flex-col items-center gap-5"
+      style={isFullscreen ? {
+        background: 'radial-gradient(ellipse 100% 65% at 50% -5%, #1B2B6B 0%, #0d1733 55%, #070d1f 100%)',
+        minHeight: '100vh',
+        padding: '2rem 1rem',
+        justifyContent: 'center',
+      } : undefined}
+    >
 
       {/* Header con marca AKADEM */}
       <header className="flex flex-col items-center gap-3 text-center">
@@ -149,7 +174,7 @@ export function Flipbook() {
         <div
           className="relative shrink-0"
           style={{
-            height: 'min(62vh, 520px)',
+            height: isFullscreen ? 'min(82vh, 820px)' : 'min(62vh, 520px)',
             aspectRatio: spread ? '2 / 1.414' : '1 / 1.414',
             perspective: '2400px',
             filter: 'drop-shadow(0 30px 60px rgba(7,13,31,0.8)) drop-shadow(0 8px 20px rgba(27,43,107,0.4))',
@@ -250,13 +275,31 @@ export function Flipbook() {
         </button>
       </div>
 
-      {/* Indicador de página */}
-      <p
-        className="text-[11px] tracking-[0.15em] uppercase text-[#A8B4C0]/70"
-        aria-live="polite"
-      >
-        {indicatorText}
-      </p>
+      {/* Indicador de página + botón pantalla completa */}
+      <div className="flex items-center gap-3">
+        <p
+          className="text-[11px] tracking-[0.15em] uppercase text-[#A8B4C0]/70"
+          aria-live="polite"
+        >
+          {indicatorText}
+        </p>
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+          title={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+          className={cn(
+            'flex size-7 shrink-0 items-center justify-center rounded-md border transition-all duration-200',
+            'border-[#C9A44A]/30 bg-white/5 text-[#A8B4C0]/70 backdrop-blur-sm',
+            'hover:border-[#C9A44A] hover:bg-[#C9A44A]/10 hover:text-[#C9A44A] hover:shadow-[0_0_10px_rgba(201,164,74,0.25)]',
+          )}
+        >
+          {isFullscreen
+            ? <Minimize2 className="size-3.5" aria-hidden />
+            : <Maximize2 className="size-3.5" aria-hidden />
+          }
+        </button>
+      </div>
 
       {/* Panel de miniaturas */}
       <div className="w-full max-w-3xl overflow-hidden rounded-lg border border-[#C9A44A]/20 bg-[#0f1b40] shadow-[0_4px_24px_rgba(7,13,31,0.5)]">
